@@ -1,4 +1,12 @@
 # =============================
+# 🧩 GLOBAL ENVIRONMENT
+# =============================
+# These lines must come *after* the FROM statement.
+# They apply to all build stages.
+# Render will inject SUPABASE_JDBC_URL at runtime, and this ENV
+# copies it into SPRING_DATASOURCE_URL before the app starts.
+
+# =============================
 # 🧱 STAGE 1 — Build the JAR
 # =============================
 FROM gradle:8.9-jdk21 AS builder
@@ -13,6 +21,17 @@ RUN ls -lh build/libs  # verify jar path
 # =============================
 FROM eclipse-temurin:21-jdk
 WORKDIR /app
+
+# Copy the built JAR from the builder stage
 COPY --from=builder /home/gradle/app/backend/build/libs/backend.jar app.jar
+
+# Copy the runtime environment variable into Spring Boot’s expected key
+# (This happens at container startup time)
+ENV SPRING_DATASOURCE_URL=${SUPABASE_JDBC_URL}
+
+# Optionally include username/password mapping too:
+ENV SPRING_DATASOURCE_USERNAME=${SUPABASE_USERNAME}
+ENV SPRING_DATASOURCE_PASSWORD=${SUPABASE_PASSWORD}
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
